@@ -2,10 +2,12 @@ package com.abdurrahimgayretli.marsroverphotos.View
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Handler
 import android.view.*
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.get
 import androidx.lifecycle.ViewModelProviders
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,6 +25,7 @@ import com.abdurrahimgayretli.marsroverphotos.marsroverphotos.View.Spirit
 import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayout
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlinx.android.synthetic.main.photo_cell.view.*
 import retrofit2.Call
 import retrofit2.Response
@@ -52,10 +55,19 @@ class MainActivity : AppCompatActivity(),MarsAdapter.onItemClickListener,
         viewPager()
 
         layoutManager = LinearLayoutManager(this)
-        swipeRefresh.setOnRefreshListener(this)
+        swipeRefresh.setOnRefreshListener(this@MainActivity)
         setupRecyclerView()
         getData(false)
 
+        recyclerView.viewTreeObserver.addOnScrollChangedListener(object:ViewTreeObserver.OnScrollChangedListener {
+            override fun onScrollChanged() {
+                if(layoutManager.findFirstVisibleItemPosition() == 0)
+                    swipeRefresh.isEnabled = true
+                else
+                    swipeRefresh.isEnabled = false
+            }
+
+        })
         recyclerView.addOnScrollListener(object:RecyclerView.OnScrollListener(){
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val visibleItemCount = layoutManager.childCount
@@ -102,27 +114,31 @@ class MainActivity : AppCompatActivity(),MarsAdapter.onItemClickListener,
         if(filterCamera != ""){
             filter["camera"] = filterCamera
         }
-        RetrofitClient.retrofitService.getMarsRovers(tabName,pager,filter).enqueue(object:retrofit2.Callback<Data>{
-            override fun onResponse(call: Call<Data>, response: Response<Data>) {
-                val listResponse = response.body()?.photos
-                if(listResponse?.size != 0){
-                    totalPage ++
+        Handler().postDelayed({
+            RetrofitClient.retrofitService.getMarsRovers(tabName,pager,filter).enqueue(object:retrofit2.Callback<Data>{
+                override fun onResponse(call: Call<Data>, response: Response<Data>) {
+                    val listResponse = response.body()?.photos
+                    if(listResponse?.size != 0){
+                        totalPage ++
+                    }
+                    if(listResponse!=null){
+                        marsAdapter.addList(listResponse)
+                    }
+                    if(page == totalPage){
+                        progressBar.visibility = View.GONE
+                    }else{
+                        progressBar.visibility = View.INVISIBLE
+                    }
+                    isLoading =false
+                    swipeRefresh.isRefreshing = false
                 }
-                if(listResponse!=null){
-                    marsAdapter.addList(listResponse)
+                override fun onFailure(call: Call<Data>, t: Throwable) {
+                    Toast.makeText(this@MainActivity,t.message,Toast.LENGTH_SHORT).show()
                 }
-                if(page == totalPage){
-                    progressBar.visibility = View.GONE
-                }
-                progressBar.visibility = View.INVISIBLE
-                isLoading =false
-                swipeRefresh.isRefreshing = false
-            }
-            override fun onFailure(call: Call<Data>, t: Throwable) {
-                Toast.makeText(this@MainActivity,t.message,Toast.LENGTH_SHORT).show()
-            }
 
-        })
+            })
+        },1000)
+
     }
     private fun setupRecyclerView(){
         recyclerView.setHasFixedSize(true)
