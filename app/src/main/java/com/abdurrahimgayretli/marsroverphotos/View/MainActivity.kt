@@ -61,10 +61,7 @@ class MainActivity : AppCompatActivity(),MarsAdapter.onItemClickListener,
 
         recyclerView.viewTreeObserver.addOnScrollChangedListener(object:ViewTreeObserver.OnScrollChangedListener {
             override fun onScrollChanged() {
-                if(layoutManager.findFirstVisibleItemPosition() == 0)
-                    swipeRefresh.isEnabled = true
-                else
-                    swipeRefresh.isEnabled = false
+                swipeRefresh.isEnabled = layoutManager.findFirstCompletelyVisibleItemPosition() == 0
             }
 
         })
@@ -137,7 +134,7 @@ class MainActivity : AppCompatActivity(),MarsAdapter.onItemClickListener,
                 }
 
             })
-        },1000)
+        },2000)
 
     }
     private fun setupRecyclerView(){
